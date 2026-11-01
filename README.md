@@ -26,3 +26,8 @@ No GitHub account or private-repository authentication is required to download t
 ## License
 
 ©2026 Creative App Solutions, LLC. All Rights Reserved. The source is publicly viewable, but no permission to copy, modify, or redistribute it is granted except as expressly authorized by Creative App Solutions, LLC.
+
+## App-owned share access
+
+`needsPurchasable: Bool = false` is a caller-provided restriction, not an entitlement check. Existing callers remain unrestricted by default.
+DocScanView accepts this input for API consistency. It has no Share or Print action; scanning and saving remain available and do not consume this restriction. Exported files should be displayed through the gated ImageViewer or PDFViewer.

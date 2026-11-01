@@ -2,8 +2,8 @@
      File: Camera_ScanToDoc.swift
    Author: Kevin Messina
   Created: 6/29/24
- Modified: 08/21/2026 05:51 PM EDT
-  Version: 5
+ Modified: 11/01/2026 03:08 PM EST
+  Version: 6
    Source: CODEX: (GPT-5) 🤖AI Code a portion or all of this code.
  
 ©2026 Creative App Solutions, LLC. - All Rights Reserved.
@@ -26,6 +26,7 @@ public struct DocScanView: View {
     let docTypes: String
     let saveIn: Files.directories
     var bypassSave = false
+    private let needsPurchasable: Bool
 
     @State private var showScan = false
 
@@ -36,7 +37,8 @@ public struct DocScanView: View {
         allImgs: Binding<[UIImage]>,
         docTypes: String,
         saveIn: Files.directories,
-        bypassSave: Bool = false
+        bypassSave: Bool = false,
+        needsPurchasable: Bool = false
     ) {
         self.table = table
         self._scannedImages = scannedImages
@@ -45,12 +47,65 @@ public struct DocScanView: View {
         self.docTypes = docTypes
         self.saveIn = saveIn
         self.bypassSave = bypassSave
+        self.needsPurchasable = needsPurchasable
     }
 
     private var scannerAvailable: Bool {
         VNDocumentCameraViewController.isSupported
     }
 
+    private func saveImages() {
+        for image in scannedImages {
+            let filename = makeFilename(extension: "jpg")
+
+            if !bypassSave {
+                let url = Files().returnPathForFilename(filename, in: saveIn).url
+                try? image.jpegData(compressionQuality: 1)?.write(to: url, options: .atomic)
+            }
+
+            appendFilename(filename)
+        }
+
+        allImgs.append(contentsOf: scannedImages)
+        dismiss()
+    }
+
+    private func savePDF() {
+        let document = PDFDocument()
+
+        for (index, image) in scannedImages.enumerated() {
+            if let page = PDFPage(image: image) {
+                document.insert(page, at: index)
+            }
+        }
+
+        let filename = makeFilename(extension: "pdf")
+
+        if !bypassSave {
+            let url = Files().returnPathForFilename(filename, in: saveIn).url
+            try? document.dataRepresentation()?.write(to: url, options: .atomic)
+        }
+
+        appendFilename(filename)
+        if let firstImage = scannedImages.first {
+            allImgs.append(firstImage)
+        }
+        dismiss()
+    }
+
+    private func appendFilename(_ filename: String) {
+        savedImgFilenames.append(savedImgFilenames.isEmpty ? filename : ",\(filename)")
+    }
+
+    private func makeFilename(extension fileExtension: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss-SSS"
+        return "\(formatter.string(from: Date()))-\(tableSuffix).\(fileExtension)"
+    }
+
+    private var tableSuffix: String {
+        table
+    }
     public var body: some View {
         NavigationStack {
             Group {
@@ -123,56 +178,5 @@ public struct DocScanView: View {
         .task { scannedImages = [] }
     }
 
-    private func saveImages() {
-        for image in scannedImages {
-            let filename = makeFilename(extension: "jpg")
 
-            if !bypassSave {
-                let url = Files().returnPathForFilename(filename, in: saveIn).url
-                try? image.jpegData(compressionQuality: 1)?.write(to: url, options: .atomic)
-            }
-
-            appendFilename(filename)
-        }
-
-        allImgs.append(contentsOf: scannedImages)
-        dismiss()
-    }
-
-    private func savePDF() {
-        let document = PDFDocument()
-
-        for (index, image) in scannedImages.enumerated() {
-            if let page = PDFPage(image: image) {
-                document.insert(page, at: index)
-            }
-        }
-
-        let filename = makeFilename(extension: "pdf")
-
-        if !bypassSave {
-            let url = Files().returnPathForFilename(filename, in: saveIn).url
-            try? document.dataRepresentation()?.write(to: url, options: .atomic)
-        }
-
-        appendFilename(filename)
-        if let firstImage = scannedImages.first {
-            allImgs.append(firstImage)
-        }
-        dismiss()
-    }
-
-    private func appendFilename(_ filename: String) {
-        savedImgFilenames.append(savedImgFilenames.isEmpty ? filename : ",\(filename)")
-    }
-
-    private func makeFilename(extension fileExtension: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss-SSS"
-        return "\(formatter.string(from: Date()))-\(tableSuffix).\(fileExtension)"
-    }
-
-    private var tableSuffix: String {
-        table
-    }
 }
